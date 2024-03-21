@@ -106,49 +106,62 @@ pipeline{
 
         }
 
-        stage('Deployment to dev'){
-
+        stage('Deployment to dev') {
             steps {
                 script {
-                sh '''
-                rm -Rf .kube
-                mkdir .kube
-                ls
-                cat $KUBECONFIG > .kube/config
-                cd ./helm/cast-service
-                helm upgrade --install cast-service . --values=values.yaml --namespace dev
-                cd ../movie-service/
-                helm upgrade --install movie-service . --values=values.yaml --namespace dev
-                cd ../nginx/
-                helm upgrade --install nginx . --values=values.yaml --namespace dev --set service.NodePort=${NP_DEV}
-                helm upgrade --install movie-db oci://registry-1.docker.io/bitnamicharts/postgresql \
-                --namespace dev \
-                --set global.postgresql.auth.postgresPassword=$MOVIE_DB_PWD \
-                --set global.postgresql.auth.username=movie \
-                --set global.postgresql.auth.password=$MOVIE_DB_PWD \
-                --set global.postgresql.auth.database=moviedb \
-                --set livenessProbe.initialDelaySeconds=100 \
-                --set readinessProbe.initialDelaySeconds=100
-                helm upgrade --install cast-db oci://registry-1.docker.io/bitnamicharts/postgresql \
-                --namespace dev \
-                --set global.postgresql.auth.postgresPassword=$CAST_DB_PWD \
-                --set global.postgresql.auth.username=cast \
-                --set global.postgresql.auth.password=$CAST_DB_PWD \
-                --set global.postgresql.auth.database=castdb \
-                --set livenessProbe.initialDelaySeconds=100 \
-                --set readinessProbe.initialDelaySeconds=100
+                    sh '''
+                    # Create the namespace if it does not exist
+                    kubectl get namespace dev || kubectl create namespace dev
 
-                '''
+                    # Configure kubectl
+                    rm -Rf .kube
+                    mkdir .kube
+                    cat $KUBECONFIG > .kube/config
+
+                    # Deploy cast-service
+                    cd ./helm/cast-service
+                    helm upgrade --install cast-service . --values=values.yaml --namespace dev
+
+                    # Deploy movie-service
+                    cd ../movie-service/
+                    helm upgrade --install movie-service . --values=values.yaml --namespace dev
+
+                    # Deploy nginx
+                    cd ../nginx/
+                    helm upgrade --install nginx . --values=values.yaml --namespace dev --set service.NodePort=${NP_DEV}
+
+                    # Deploy movie-db
+                    helm upgrade --install movie-db oci://registry-1.docker.io/bitnamicharts/postgresql \
+                    --namespace dev \
+                    --set global.postgresql.auth.postgresPassword=$MOVIE_DB_PWD \
+                    --set global.postgresql.auth.username=movie \
+                    --set global.postgresql.auth.password=$MOVIE_DB_PWD \
+                    --set global.postgresql.auth.database=moviedb \
+                    --set livenessProbe.initialDelaySeconds=100 \
+                    --set readinessProbe.initialDelaySeconds=100
+
+                    # Deploy cast-db
+                    helm upgrade --install cast-db oci://registry-1.docker.io/bitnamicharts/postgresql \
+                    --namespace dev \
+                    --set global.postgresql.auth.postgresPassword=$CAST_DB_PWD \
+                    --set global.postgresql.auth.username=cast \
+                    --set global.postgresql.auth.password=$CAST_DB_PWD \
+                    --set global.postgresql.auth.database=castdb \
+                    --set livenessProbe.initialDelaySeconds=100 \
+                    --set readinessProbe.initialDelaySeconds=100
+                    '''
                 }
             }
+        }
 
-            }
 
         stage('Deployment to QA'){
 
             steps {
                 script {
                 sh '''
+                # Create the namespace if it does not exist
+                kubectl get namespace QA || kubectl create namespace QA
                 rm -Rf .kube
                 mkdir .kube
                 ls
@@ -180,13 +193,15 @@ pipeline{
                 }
             }
 
-            }
+        }
 
         stage('Deployment to staging'){
 
             steps {
                 script {
                 sh '''
+                # Create the namespace if it does not exist
+                kubectl get namespace staging || kubectl create namespace staging
                 rm -Rf .kube
                 mkdir .kube
                 ls
@@ -218,7 +233,7 @@ pipeline{
                 }
             }   
 
-            }
+        }
 
 
         stage('Deployment to prod'){
@@ -234,6 +249,8 @@ pipeline{
 
                 script {
                     sh '''
+                    # Create the namespace if it does not exist
+                    kubectl get namespace prod || kubectl create namespace prod
                     rm -Rf .kube
                     mkdir .kube
                     ls
@@ -263,8 +280,8 @@ pipeline{
 
                 '''
                 }
-                }
             }
+        }
 
 
     }
