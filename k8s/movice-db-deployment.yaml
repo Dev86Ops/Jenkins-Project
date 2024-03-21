@@ -1,0 +1,51 @@
+# Movie Database Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: movie-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: movie-db
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: movie-db
+    spec:
+      containers:
+      - name: movie-db
+        image: postgres:12.1-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "movie_db_username"
+        - name: POSTGRES_PASSWORD
+          value: "movie_db_password"
+        - name: POSTGRES_DB
+          value: "movie_db_dev"
+        resources: {}
+        volumeMounts:
+        - mountPath: "/var/lib/postgresql/data/"
+          name: postgres-data-movie-claim
+      volumes:
+      - name: postgres-data-movie-claim
+        persistentVolumeClaim:
+          claimName: postgres-data-movie-claim
+status: {}
+
+---
+
+# Movie Database PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-movie-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}

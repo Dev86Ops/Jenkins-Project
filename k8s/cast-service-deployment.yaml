@@ -1,0 +1,71 @@
+# Cast Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cast-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cast-service
+  strategy:
+    type: Recreate   
+  template:
+    metadata:
+      labels:
+        app: cast-service
+    spec:
+      containers:
+      - name: cast-service
+        image: cast-service:latest
+        command: ["uvicorn"]
+        args: ["app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+        ports:
+        - containerPort: 8000
+          hostPort: 8002
+          protocol: TCP
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://cast_db_username:cast_db_password@cast-db/cast_db_dev"
+        resources: {}
+        volumeMounts:
+        - mountPath: "/app/"
+          name: cast-service-volume
+      restartPolicy: Always
+      volumes:
+      - name: cast-service-volume
+        persistentVolumeClaim:
+            claimName: cast-service-volume
+status: {}
+
+---
+
+# Cast Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: cast-service
+spec:
+  selector:
+    app: cast-service
+  ports:
+  - protocol: TCP
+    port: 8002
+    targetPort: 8000
+status:
+  loadBalancer: {}    
+
+---
+
+# Cast Database PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cast-service-volume
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}

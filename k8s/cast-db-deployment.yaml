@@ -1,0 +1,51 @@
+# Cast Database Deployment
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cast-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cast-db
+  strategy:
+    type: Recreate   
+  template:
+    metadata:
+      labels:
+        app: cast-db
+    spec:
+      containers:
+      - name: cast-db
+        image: postgres:12.1-alpine
+        env:
+        - name: POSTGRES_USER
+          value: "cast_db_username"
+        - name: POSTGRES_PASSWORD
+          value: "cast_db_password"
+        - name: POSTGRES_DB
+          value: "cast_db_dev"
+        volumeMounts:
+        - mountPath: "/var/lib/postgresql/data/"
+          name: postgres-data-cast
+      restartPolicy: Always   
+      volumes:
+      - name: postgres-data-cast
+        persistentVolumeClaim:
+          claimName: postgres-data-cast
+status: {}
+
+---
+
+# Cast Database PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data-cast
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+status: {}
